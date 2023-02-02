@@ -6,6 +6,18 @@ import java.io.InputStreamReader;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintWriter;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+import com.codurance.training.tasks.Database.Database;
+import com.codurance.training.tasks.executors.*;
+import com.codurance.training.tasks.models.Task;
+import com.codurance.training.tasks.services.ConsolePrinterService;
+import com.codurance.training.tasks.services.IPrinterService;
+import com.codurance.training.tasks.services.ProjectService;
+import com.codurance.training.tasks.services.TaskService;
+import com.codurance.training.tasks.utils.IDGenerator;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,7 +39,20 @@ public final class ApplicationTest {
     public ApplicationTest() throws IOException {
         BufferedReader in = new BufferedReader(new InputStreamReader(new PipedInputStream(inStream)));
         PrintWriter out = new PrintWriter(new PipedOutputStream(outStream), true);
-        TaskList taskList = new TaskList(in, out);
+
+        final Map<String, List<Task>> tasks = new Database().getTasks();
+        IDGenerator idGenerator = new IDGenerator();
+        IPrinterService printer = new ConsolePrinterService();
+        ProjectService projectService = new ProjectService();
+        TaskService taskService = new TaskService(idGenerator);
+
+        final List<CommandExecutor> commandExecutorList = Arrays.asList(
+                new AddCommandExecutor(tasks, taskService, projectService),
+                new CheckCommandExecutor(tasks, taskService),
+                new ShowCommandExecutor(tasks, printer),
+                new UncheckCommandExecutor(tasks, taskService)
+        );
+        TaskList taskList = new TaskList(in, out, commandExecutorList);
         applicationThread = new Thread(taskList);
     }
 
